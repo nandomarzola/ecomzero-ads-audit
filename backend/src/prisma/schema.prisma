@@ -1,0 +1,119 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String        @id @default(cuid())
+  email        String        @unique
+  passwordHash String
+  name         String?
+  createdAt    DateTime      @default(now())
+  stores       ShopeeStore[]
+}
+
+model ShopeeStore {
+  id             String    @id @default(cuid())
+  userId         String
+  user           User      @relation(fields: [userId], references: [id])
+  shopId         String    @unique
+  shopName       String?
+  accessToken    String // sempre gravado com prefixo enc:v1:
+  refreshToken   String // sempre gravado com prefixo enc:v1:
+  tokenExpiresAt DateTime
+  lastSyncAt     DateTime?
+  syncStatus     String    @default("idle")
+  syncJobId      String?
+  syncProgress   Int       @default(0)
+  syncError      String?
+  syncStartedAt  DateTime?
+  syncFinishedAt DateTime?
+  status         String    @default("active") // active | token_expired | disconnected
+  createdAt      DateTime  @default(now())
+
+  items     ListingItem[]
+  auditRuns AuditRun[]
+
+  @@index([userId])
+}
+
+model ListingItem {
+  id            String      @id @default(cuid())
+  storeId       String
+  store         ShopeeStore @relation(fields: [storeId], references: [id])
+  shopeeItemId  BigInt
+  title         String
+  description   String      @db.Text
+  categoryId    Int
+  categoryName  String?
+  price         Decimal
+  stock         Int
+  images        Json
+  attributes    Json
+  views         Int?
+  sold          Int?
+  likes         Int?
+  active        Boolean     @default(true)
+  lastFetchedAt DateTime    @default(now())
+
+  audits        ListingAudit[]
+  auditRunItems AuditRunItem[]
+
+  @@unique([storeId, shopeeItemId])
+}
+
+model AuditRun {
+  id             String      @id @default(cuid())
+  storeId        String
+  store          ShopeeStore @relation(fields: [storeId], references: [id])
+  status         String      @default("pending") // pending | running | done | failed
+  totalItems     Int         @default(0)
+  processedItems Int         @default(0)
+  failedItems    Int         @default(0)
+  startedAt      DateTime    @default(now())
+  finishedAt     DateTime?
+
+  audits   ListingAudit[]
+  runItems AuditRunItem[]
+
+  @@index([storeId, startedAt])
+}
+
+model ListingAudit {
+  id         String      @id @default(cuid())
+  auditRunId String
+  auditRun   AuditRun    @relation(fields: [auditRunId], references: [id])
+  itemId     String
+  item       ListingItem @relation(fields: [itemId], references: [id])
+
+  score          Int
+  issues         Json
+  suggestedTitle String?
+  suggestedDesc  String?   @db.Text
+  suggestedAttrs Json?
+  appliedAt      DateTime?
+  createdAt      DateTime  @default(now())
+
+  @@unique([auditRunId, itemId])
+  @@index([itemId, createdAt])
+  @@index([auditRunId])
+}
+
+model AuditRunItem {
+  id           String      @id @default(cuid())
+  auditRunId   String
+  auditRun     AuditRun    @relation(fields: [auditRunId], references: [id], onDelete: Cascade)
+  itemId       String
+  item         ListingItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  status       String      @default("pending")
+  errorMessage String?
+  createdAt    DateTime    @default(now())
+  updatedAt    DateTime    @updatedAt
+
+  @@unique([auditRunId, itemId])
+  @@index([auditRunId, status])
+}

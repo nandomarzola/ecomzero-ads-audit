@@ -1,0 +1,22 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ads_audit_postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ads_audit
+      POSTGRES_PASSWORD: ads_audit
+      POSTGRES_DB: ecomzero_ads_audit
+    # 5433 no host para nao colidir com um Postgres local na 5432
+    ports:
+      - "5433:5432"
+    volumes:
+      - ads_audit_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ads_audit -d ecomzero_ads_audit"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  ads_audit_pgdata:
