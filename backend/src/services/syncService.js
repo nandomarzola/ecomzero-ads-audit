@@ -2,6 +2,7 @@ const env = require('../config/env');
 const prisma = require('../lib/prisma');
 const AppError = require('../lib/AppError');
 const shopeeApi = require('./shopeeApiService');
+const { logRawShopeePayload } = require('./shopeeRawPayloadLogger');
 
 let extraPayloadLogged = false;
 
@@ -248,6 +249,22 @@ async function syncStore(storeId, job) {
       adaptiveBatchFetch(shopeeApi.getItemBaseInfo, store, batch),
       adaptiveBatchFetch(shopeeApi.getItemExtraInfo, store, batch),
     ]);
+    for (const payload of basePayloads) {
+      await logRawShopeePayload({
+        endpoint: 'product/get_item_base_info',
+        store,
+        itemIds: batch,
+        payload,
+      });
+    }
+    for (const payload of extraPayloads) {
+      await logRawShopeePayload({
+        endpoint: 'product/get_item_extra_info',
+        store,
+        itemIds: batch,
+        payload,
+      });
+    }
     if (!extraPayloadLogged && extraPayloads[0]) {
       console.info('[shopee-sync][payload-confirmation] product/get_item_extra_info', extraPayloads[0]);
       extraPayloadLogged = true;

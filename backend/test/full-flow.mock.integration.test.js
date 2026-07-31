@@ -67,6 +67,7 @@ test('fluxo completo OAuth, sync, auditoria e leitura com provedores simulados',
   process.env.SHOPEE_HOST = `http://127.0.0.1:${port}`;
   process.env.SHOPEE_REDIRECT_URL = `http://127.0.0.1:${port}/callback`;
   process.env.TOKEN_ENCRYPTION_KEY = '33'.repeat(32);
+  process.env.SHOPEE_RAW_PAYLOAD_LOG_ENABLED = 'false';
   process.env.ANTHROPIC_API_KEY = 'mock-anthropic-key';
   process.env.ANTHROPIC_HOST = `http://127.0.0.1:${port}`;
 

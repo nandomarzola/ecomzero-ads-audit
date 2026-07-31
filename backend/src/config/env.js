@@ -45,6 +45,8 @@ const env = {
     listPageSize: positiveInteger('SHOPEE_LIST_PAGE_SIZE', 100),
     itemBatchSize: positiveInteger('SHOPEE_ITEM_BATCH_SIZE', 50),
     syncTransactionTimeoutMs: positiveInteger('SHOPEE_SYNC_TRANSACTION_TIMEOUT_MS', 120_000),
+    rawPayloadLogEnabled: process.env.SHOPEE_RAW_PAYLOAD_LOG_ENABLED === 'true',
+    rawPayloadLogPath: process.env.SHOPEE_RAW_PAYLOAD_LOG_PATH,
   },
   tokenEncryptionKey: process.env.TOKEN_ENCRYPTION_KEY,
   anthropic: {
@@ -55,6 +57,10 @@ const env = {
     requestsPerMinute: positiveInteger('ANTHROPIC_REQUESTS_PER_MINUTE', 50),
   },
 };
+
+if (env.isProduction && env.shopee.rawPayloadLogEnabled) {
+  throw new Error('SHOPEE_RAW_PAYLOAD_LOG_ENABLED não pode ser ativado em produção');
+}
 
 env.requireRedis = () => required('REDIS_URL');
 env.requireTokenEncryptionKey = () => required('TOKEN_ENCRYPTION_KEY');

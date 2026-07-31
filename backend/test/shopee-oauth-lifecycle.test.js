@@ -10,6 +10,7 @@ process.env.SHOPEE_PARTNER_KEY = 'test-partner-key';
 process.env.SHOPEE_HOST = 'https://partner.test';
 process.env.SHOPEE_REDIRECT_URL = 'https://api.test/api/shopee/callback';
 process.env.FRONTEND_URL = 'https://app.test';
+process.env.SHOPEE_RAW_PAYLOAD_LOG_ENABLED = 'false';
 
 const prisma = require('../src/lib/prisma');
 const controller = require('../src/controllers/shopee.controller');

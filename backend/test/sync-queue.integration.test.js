@@ -1,6 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('node:http');
+const fs = require('node:fs/promises');
 
 const enabled = process.env.RUN_SYNC_QUEUE_INTEGRATION === '1';
 
@@ -69,6 +70,8 @@ test('sync percorre fila BullMQ, worker, Shopee simulada e persistência', {
   process.env.TOKEN_ENCRYPTION_KEY = '55'.repeat(32);
   process.env.JWT_SECRET = 'sync-queue-test-jwt-secret-32-bytes';
   process.env.REDIS_URL ||= 'redis://127.0.0.1:6379';
+  process.env.SHOPEE_RAW_PAYLOAD_LOG_ENABLED = 'true';
+  process.env.SHOPEE_RAW_PAYLOAD_LOG_PATH = `/tmp/ecomzero-ads-audit-sync-${process.pid}-${Date.now()}.jsonl`;
 
   const app = require('../src/app');
   const prisma = require('../src/lib/prisma');
@@ -145,6 +148,16 @@ test('sync percorre fila BullMQ, worker, Shopee simulada e persistência', {
       '/api/v2/product/get_item_extra_info',
     ]);
     assert.equal(requestedPaths.some((path) => /update|add|delete/i.test(path)), false);
+    const rawEntries = (await fs.readFile(process.env.SHOPEE_RAW_PAYLOAD_LOG_PATH, 'utf8'))
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line));
+    assert.deepEqual(rawEntries.map((entry) => entry.endpoint), [
+      'product/get_item_base_info',
+      'product/get_item_extra_info',
+    ]);
+    assert.equal(rawEntries[0].payload.response.item_list[0].item_name, 'Luminária de mesa LED');
+    assert.equal(rawEntries[1].payload.response.item_list[0].sale, 4);
   } finally {
     if (worker) await closeWorkers([worker]);
     if (queueJob) await queueJob.remove().catch(() => undefined);
@@ -160,5 +173,6 @@ test('sync percorre fila BullMQ, worker, Shopee simulada e persistência', {
     if (user) await prisma.user.deleteMany({ where: { id: user.id } });
     await prisma.$disconnect();
     await new Promise((resolve) => mock.close(resolve));
+    await fs.unlink(process.env.SHOPEE_RAW_PAYLOAD_LOG_PATH).catch(() => undefined);
   }
 });
